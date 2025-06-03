@@ -57,16 +57,37 @@ pub const Parser = struct {
     }
 
     pub fn arg1(self: *const Parser) []const u8 {
-        var tokens = std.mem.tokenizeScalar(u8, self.current_command, ' ');
-        if (self.commandType() == .C_ARITHMETIC) return self.current_command;
+        // First, clean the command by removing comments
+        var clean_command = self.current_command;
+        if (std.mem.indexOf(u8, clean_command, "//")) |comment_start| {
+            clean_command = std.mem.trim(u8, clean_command[0..comment_start], " \t\r\n");
+        }
+
+        var tokens = std.mem.tokenizeAny(u8, clean_command, " \t");
+
+        if (self.commandType() == .C_ARITHMETIC) {
+            // For arithmetic, return just the first token (the operation)
+            return tokens.next().?;
+        }
+
         _ = tokens.next(); // skip command
         return tokens.next().?;
     }
 
     pub fn arg2(self: *const Parser) u16 {
-        var tokens = std.mem.tokenizeScalar(u8, self.current_command, ' ');
+        // First, clean the command by removing comments
+        var clean_command = self.current_command;
+        if (std.mem.indexOf(u8, clean_command, "//")) |comment_start| {
+            clean_command = std.mem.trim(u8, clean_command[0..comment_start], " \t\r\n");
+        }
+
+        var tokens = std.mem.tokenizeAny(u8, clean_command, " \t");
         _ = tokens.next(); // skip command
-        _ = tokens.next(); // skip segment
-        return std.fmt.parseInt(u16, tokens.next().?, 10) catch 0;
+        _ = tokens.next(); // skip segment/function name
+
+        if (tokens.next()) |arg2_str| {
+            return std.fmt.parseInt(u16, arg2_str, 10) catch 0;
+        }
+        return 0;
     }
 };

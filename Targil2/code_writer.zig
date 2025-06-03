@@ -28,6 +28,7 @@ pub const CodeWriter = struct {
     }
 
     // הוספת פונקציה לכתיבת קוד האתחול
+    // הוספת פונקציה לכתיבת קוד האתחול
     pub fn writeBootstrap(self: *CodeWriter) !void {
         // log:
         try self.writer.print("// Enter writeBootstrap\n", .{});
@@ -37,6 +38,11 @@ pub const CodeWriter = struct {
 
         // קריאה ל Sys.init 0
         try self.writeCall("Sys.init", 0);
+
+        // Since Sys.init should never return (infinite loop),
+        // add safety halt after the return address
+        try self.writer.writeAll("// Safety halt - should never reach here\n");
+        try self.writer.writeAll("(END)\n@END\n0;JMP\n");
 
         // log:
         try self.writer.print("// Exit writeBootstrap\n", .{});
