@@ -1,4 +1,4 @@
-// targil 2  Ester Ben-Shabat 211950290
+// targil 2  Ester Ben-Shabat 211950290 yael novick 211526462
 const std = @import("std");
 const Parser = @import("parser.zig");
 
