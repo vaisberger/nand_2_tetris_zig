@@ -1,0 +1,190 @@
+class Main {
+    function void main() {
+        var int choice, operations, selectedObject;
+        var Glasses glasses;
+        var Zikit zikit;
+        var boolean continue;
+        var String objectName;
+        
+        let operations = 0;
+        let selectedObject = 0;
+        let continue = true;
+        
+        // Clear screen and create objects
+        do Screen.clearScreen();
+        let glasses = Glasses.new(150, 150);
+        let zikit = Zikit.new(300, 150);
+        
+        // Display both objects
+        do glasses.draw();
+        do zikit.draw();
+        
+        // Display menu
+        do Output.moveCursor(0, 0);
+        do Output.printString("Choose object:");
+        do Output.println();
+        do Output.printString("1 - Glasses (G)");
+        do Output.println();
+        do Output.printString("2 - Zikit (Z)");
+        do Output.println();
+        do Output.printString("Enter choice (1 or 2): ");
+        
+        let choice = Keyboard.readInt("");
+        
+        // Clear screen and handle selected object
+        do Screen.clearScreen();
+        
+        if (choice = 1) {
+            let selectedObject = 1;
+            let objectName = "Glasses";
+            let operations = Main.handleGlasses(glasses);
+        } else {
+            if (choice = 2) {
+                let selectedObject = 2;
+                let objectName = "Zikit";
+                let operations = Main.handleZikit(zikit);
+            } else {
+                do Output.printString("Invalid choice!");
+                return;
+            }
+        }
+        
+        // Display final results
+        do Screen.clearScreen();
+        do Output.moveCursor(10, 10);
+        do Output.printString("Selected object: ");
+        do Output.printString(objectName);
+        do Output.println();
+        do Output.printString("Total operations performed: ");
+        do Output.printInt(operations);
+        do Output.println();
+        do Output.printString("Program ended. Press any key...");
+        do Keyboard.readChar();
+        
+        return;
+    }
+    
+    function int handleGlasses(Glasses glasses) {
+        var int action, operations;
+        var boolean continue;
+        
+        let operations = 0;
+        let continue = true;
+        
+        while (continue) {
+            do glasses.draw();
+            do Main.showMenu();
+            let action = Keyboard.readInt("Enter action: ");
+            let operations = operations + 1;
+            
+            if (action = 1) {
+                do glasses.moveLeft();
+
+            } else {
+                if (action = 2) {
+                    do glasses.moveRight();
+                } else {
+                    if (action = 3) {
+                        do glasses.moveUp();
+                    } else {
+                        if (action = 4) {
+                            do glasses.moveDown();
+                        } else {
+                            if (action = 5) {
+                                do glasses.rotate90();
+                            } else {
+                                if (action = 6) {
+                                    do glasses.rotate180();
+                                } else {
+                                    if (action = 7) {
+                                        do glasses.rotate270();
+                                    } else {
+                                        if (action = 8) {
+                                            let continue = false;
+                                            let operations = operations - 1; // Don't count exit as operation
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return operations;
+    }
+    
+    function int handleZikit(Zikit zikit) {
+        var int action, operations;
+        var boolean continue;
+        
+        let operations = 0;
+        let continue = true;
+        
+        while (continue) {
+            do zikit.draw();
+            do Main.showMenu();
+            let action = Keyboard.readInt("Enter action: ");
+            let operations = operations + 1;
+            
+            if (action = 1) {
+                do zikit.moveRight();
+            } else {
+                if (action = 2) {
+                    do zikit.moveLeft();
+                } else {
+                    if (action = 3) {
+                        do zikit.moveUp();
+                    } else {
+                        if (action = 4) {
+                            do zikit.moveDown();
+                        } else {
+                            if (action = 5) {
+                                do zikit.rotate90();
+                            } else {
+                                if (action = 6) {
+                                    do zikit.rotate180();
+                                } else {
+                                    if (action = 7) {
+                                        do zikit.rotate270();
+                                    } else {
+                                        if (action = 8) {
+                                            let continue = false;
+                                            let operations = operations - 1; // Don't count exit as operation
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return operations;
+    }
+    
+    function void showMenu() {
+        do Output.moveCursor(0, 0);
+        do Output.printString("Actions:");
+        do Output.println();
+        do Output.printString("1 - Move Right");
+        do Output.println();
+        do Output.printString("2 - Move Left");
+        do Output.println();
+        do Output.printString("3 - Move Up");
+        do Output.println();
+        do Output.printString("4 - Move Down");
+        do Output.println();
+        do Output.printString("5 - Rotate 90");
+        do Output.println();
+        do Output.printString("6 - Rotate 180");
+        do Output.println();
+        do Output.printString("7 - Rotate 270");
+        do Output.println();
+        do Output.printString("8 - Exit");
+        do Output.println();
+        return;
+    }
+}

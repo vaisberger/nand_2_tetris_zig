@@ -1,0 +1,202 @@
+class Glasses {
+    field int x, y;
+    field int rotation; // Track current rotation: 0=normal, 1=90deg, 2=180deg, 3=270deg
+    
+    constructor Glasses new(int startX, int startY) {
+        let x = startX;
+        let y = startY;
+        let rotation = 0;
+        return this;
+    }
+    
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+    
+    method void draw() {
+        if (rotation = 0) {
+            do drawGlasses(x + (y * 32));
+        } else {
+            if (rotation = 1) {
+                do drawGlasses90(x + (y * 32));
+            } else {
+                if (rotation = 2) {
+                    do drawGlasses180(x + (y * 32));
+                } else {
+                    if (rotation = 3) {
+                        do drawGlasses270(x + (y * 32));
+                    }
+                }
+            }
+        }
+        return;
+    }
+    
+    method void erase() {
+        var int location, memAddress, i;
+        let location = x + (y * 32);
+        let memAddress = 16384 + location;
+        
+        // Clear 16 rows of bitmap data
+        let i = 0;
+        while (i < 16) {
+            do Memory.poke(memAddress + (i * 32), 0);
+            let i = i + 1;
+        }
+        return;
+    }
+    
+   method void moveRight() {
+    if (x > 16) {
+        do erase();
+        let x = x - 10;  // DECREASE x to move LEFT
+        do draw();
+    }
+    return;
+}
+
+method void moveLeft() {
+    if (x < 480) {
+        do erase();
+        let x = x + 10;  // INCREASE x to move RIGHT
+        do draw();
+    }
+    return;
+}
+    
+    method void moveUp() {
+        if (y > 10) {
+            do erase();
+            let y = y - 10;
+            do draw();
+        }
+        return;
+    }
+    
+    method void moveDown() {
+        if (y < 240) {
+            do erase();
+            let y = y + 10;
+            do draw();
+        }
+        return;
+    }
+    
+    method void rotate90() {
+        do erase();
+        let rotation = rotation + 1;
+        if (rotation = 4) {
+            let rotation = 0;
+        }
+        do draw();
+        return;
+    }
+    
+    method void rotate180() {
+        do erase();
+        let rotation = rotation + 2;
+        if (rotation > 3) {
+            let rotation = rotation - 4;
+        }
+        do draw();
+        return;
+    }
+    
+    method void rotate270() {
+        do erase();
+        let rotation = rotation + 3;
+        if (rotation > 3) {
+            let rotation = rotation - 4;
+        }
+        do draw();
+        return;
+    }
+    
+    method void drawGlasses(int location) {
+        var int memAddress;
+        let memAddress = 16384 + location;
+        do Memory.poke(memAddress + 0, 0);
+        do Memory.poke(memAddress + 32, 32);
+        do Memory.poke(memAddress + 64, 16464);
+        do Memory.poke(memAddress + 96, -24568);
+        do Memory.poke(memAddress + 128, 4100);
+        do Memory.poke(memAddress + 160, 2050);
+        do Memory.poke(memAddress + 192, 2047);
+        do Memory.poke(memAddress + 224, 1105);
+        do Memory.poke(memAddress + 256, 1105);
+        do Memory.poke(memAddress + 288, 2015);
+        do Memory.poke(memAddress + 320, 0);
+        do Memory.poke(memAddress + 352, 0);
+        do Memory.poke(memAddress + 384, 0);
+        do Memory.poke(memAddress + 416, 0);
+        do Memory.poke(memAddress + 448, 0);
+        do Memory.poke(memAddress + 480, 0);
+        return;
+    }
+    
+    method void drawGlasses90(int location) {
+        var int memAddress;
+        let memAddress = 16384 + location;
+        do Memory.poke(memAddress + 0, 480);
+        do Memory.poke(memAddress + 32, 800);
+        do Memory.poke(memAddress + 64, 1312);
+        do Memory.poke(memAddress + 96, 2336);
+        do Memory.poke(memAddress + 128, 4576);
+        do Memory.poke(memAddress + 160, 8448);
+        do Memory.poke(memAddress + 192, 4576);
+        do Memory.poke(memAddress + 224, 288);
+        do Memory.poke(memAddress + 256, 288);
+        do Memory.poke(memAddress + 288, 288);
+        do Memory.poke(memAddress + 320, 480);
+        do Memory.poke(memAddress + 352, 512);
+        do Memory.poke(memAddress + 384, 1024);
+        do Memory.poke(memAddress + 416, 2048);
+        do Memory.poke(memAddress + 448, 4096);
+        do Memory.poke(memAddress + 480, 2048);
+        return;
+    }
+    
+    method void drawGlasses180(int location) {
+        var int memAddress;
+        let memAddress = 16384 + location;
+        do Memory.poke(memAddress + 0, 0);
+        do Memory.poke(memAddress + 32, 0);
+        do Memory.poke(memAddress + 64, 0);
+        do Memory.poke(memAddress + 96, 0);
+        do Memory.poke(memAddress + 128, 0);
+        do Memory.poke(memAddress + 160, -1056);
+        do Memory.poke(memAddress + 192, -30176);
+        do Memory.poke(memAddress + 224, -30176);
+        do Memory.poke(memAddress + 256, -32);
+        do Memory.poke(memAddress + 320, 16400);
+        do Memory.poke(memAddress + 352, 8200);
+        do Memory.poke(memAddress + 384, 4101);
+        do Memory.poke(memAddress + 416, 2562);
+        do Memory.poke(memAddress + 448, 1024);
+        do Memory.poke(memAddress + 480, 0);
+        return;
+    }
+    
+    method void drawGlasses270(int location) {
+        var int memAddress;
+        let memAddress = 16384 + location;
+        do Memory.poke(memAddress + 0, 16);
+        do Memory.poke(memAddress + 32, 8);
+        do Memory.poke(memAddress + 64, 16);
+        do Memory.poke(memAddress + 96, 32);
+        do Memory.poke(memAddress + 128, 64);
+        do Memory.poke(memAddress + 160, 1920);
+        do Memory.poke(memAddress + 192, 1152);
+        do Memory.poke(memAddress + 224, 1152);
+        do Memory.poke(memAddress + 256, 1152);
+        do Memory.poke(memAddress + 288, 1928);
+        do Memory.poke(memAddress + 320, 132);
+        do Memory.poke(memAddress + 352, 1928);
+        do Memory.poke(memAddress + 384, 1168);
+        do Memory.poke(memAddress + 416, 1184);
+        do Memory.poke(memAddress + 448, 1216);
+        do Memory.poke(memAddress + 480, 1920);
+        return;
+    }
+}

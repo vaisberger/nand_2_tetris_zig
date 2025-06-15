@@ -1,0 +1,194 @@
+class Zikit {
+    field int x, y;
+    field int rotation; // Track current rotation: 0=normal, 1=90deg, 2=180deg, 3=270deg
+    
+    constructor Zikit new(int startX, int startY) {
+        let x = startX;
+        let y = startY;
+        let rotation = 0;
+        return this;
+    }
+    
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+    
+    method void draw() {
+        if (rotation = 0) {
+            do drawZikit(x + (y * 32));
+        } else {
+            if (rotation = 1) {
+                do drawZikit90(x + (y * 32));
+            } else {
+                if (rotation = 2) {
+                    do drawZikit180(x + (y * 32));
+                } else {
+                    if (rotation = 3) {
+                        do drawZikit270(x + (y * 32));
+                    }
+                }
+            }
+        }
+        return;
+    }
+    
+    method void erase() {
+        var int location, memAddress, i;
+        let location = x + (y * 32);
+        let memAddress = 16384 + location;
+        
+        // Clear 16 rows of bitmap data
+        let i = 0;
+        while (i < 16) {
+            do Memory.poke(memAddress + (i * 32), 0);
+            let i = i + 1;
+        }
+        return;
+    }
+    
+    method void moveRight() {
+        if (x < 495) {
+            do erase();
+            let x = x + 10;
+            do draw();
+        }
+        return;
+    }
+    
+    method void moveLeft() {
+        if (x > 10) {
+            do erase();
+            let x = x - 10;
+            do draw();
+        }
+        return;
+    }
+    
+    method void moveUp() {
+        if (y > 10) {
+            do erase();
+            let y = y - 10;
+            do draw();
+        }
+        return;
+    }
+    
+    method void moveDown() {
+        if (y < 240) {
+            do erase();
+            let y = y + 10;
+            do draw();
+        }
+        return;
+    }
+    
+    method void rotate90() {
+        do erase();
+        let rotation = 1;
+        do draw();
+        return;
+    }
+    
+    method void rotate180() {
+        do erase();
+        let rotation = 2;
+        do draw();
+        return;
+    }
+    
+    method void rotate270() {
+        do erase();
+        let rotation = 3;
+        do draw();
+        return;
+    }
+     
+    method void drawZikit(int location) {
+        var int memAddress;
+        let memAddress = 16384 + location;
+        do Memory.poke(memAddress + 0, 0);
+        do Memory.poke(memAddress + 32, 318);
+        do Memory.poke(memAddress + 64, 938);
+        do Memory.poke(memAddress + 96, 294);
+        do Memory.poke(memAddress + 128, 290);
+        do Memory.poke(memAddress + 160, 510);
+        do Memory.poke(memAddress + 192, 8480);
+        do Memory.poke(memAddress + 224, 31012);
+        do Memory.poke(memAddress + 256, 12286);
+        do Memory.poke(memAddress + 288, 2308);
+        do Memory.poke(memAddress + 320, 2496);
+        do Memory.poke(memAddress + 352, 8004);
+        do Memory.poke(memAddress + 384, 6372);
+        do Memory.poke(memAddress + 416, 6220);
+        do Memory.poke(memAddress + 448, 3096);
+        do Memory.poke(memAddress + 480, 4080);
+        return;
+    }
+    
+    method void drawZikit90(int location) {
+        var int memAddress;
+        let memAddress = 16384 + location;
+        do Memory.poke(memAddress + 0, 0);
+        do Memory.poke(memAddress + 32, 31872);
+        do Memory.poke(memAddress + 64, 21980);
+        do Memory.poke(memAddress + 96, 25734);
+        do Memory.poke(memAddress + 128, 17539);
+        do Memory.poke(memAddress + 160, 32649);
+        do Memory.poke(memAddress + 192, 1213);
+        do Memory.poke(memAddress + 224, 9385);
+        do Memory.poke(memAddress + 256, 32753);
+        do Memory.poke(memAddress + 288, 8337);
+        do Memory.poke(memAddress + 320, 147);
+        do Memory.poke(memAddress + 352, 511);
+        do Memory.poke(memAddress + 384, 284);
+        do Memory.poke(memAddress + 416, 896);
+        do Memory.poke(memAddress + 448, 256);
+        do Memory.poke(memAddress + 480, 0);
+        return;
+    }
+    
+    method void drawZikit180(int location) {
+        var int memAddress;
+        let memAddress = 16384 + location;
+        do Memory.poke(memAddress + 0, 4080);
+        do Memory.poke(memAddress + 32, 6192);
+        do Memory.poke(memAddress + 64, 12824);
+        do Memory.poke(memAddress + 96, 10008);
+        do Memory.poke(memAddress + 128, 8952);
+        do Memory.poke(memAddress + 160, 912);
+        do Memory.poke(memAddress + 192, 8336);
+        do Memory.poke(memAddress + 224, 32756);
+        do Memory.poke(memAddress + 256, 9374);
+        do Memory.poke(memAddress + 288, 1156);
+        do Memory.poke(memAddress + 320, 32640);
+        do Memory.poke(memAddress + 352, 17536);
+        do Memory.poke(memAddress + 384, 25728);
+        do Memory.poke(memAddress + 416, 21952);
+        do Memory.poke(memAddress + 448, 31872);
+        do Memory.poke(memAddress + 480, 0);
+        return;
+    }
+    
+    method void drawZikit270(int location) {
+        var int memAddress;
+        let memAddress = 16384 + location;
+        do Memory.poke(memAddress + 0, 0);
+        do Memory.poke(memAddress + 32, 128);
+        do Memory.poke(memAddress + 64, 448);
+        do Memory.poke(memAddress + 96, 14464);
+        do Memory.poke(memAddress + 128, -128);
+        do Memory.poke(memAddress + 160, -14080);
+        do Memory.poke(memAddress + 192, -30460);
+        do Memory.poke(memAddress + 224, -28674);
+        do Memory.poke(memAddress + 256, -27356);
+        do Memory.poke(memAddress + 288, -17120);
+        do Memory.poke(memAddress + 320, -28162);
+        do Memory.poke(memAddress + 352, -16094);
+        do Memory.poke(memAddress + 384, 24870);
+        do Memory.poke(memAddress + 416, 15274);
+        do Memory.poke(memAddress + 448, 318);
+        do Memory.poke(memAddress + 480, 0);
+        return;
+    }
+}
