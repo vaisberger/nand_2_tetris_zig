@@ -33,6 +33,7 @@ const Parser = struct {
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) Self {
+        // הקצאת זיכרון אלורטור
         return Self{
             .tokens = ArrayList(Token).init(allocator),
             .output = ArrayList(u8).init(allocator),
@@ -68,6 +69,7 @@ const Parser = struct {
 
         var lines = std.mem.splitScalar(u8, content, '\n');
         while (lines.next()) |line| {
+            // עבור כל טוקן שזוהה אנחנו שולחים אותו לPARSER
             const trimmed = std.mem.trim(u8, line, " \t\r\n");
             if (trimmed.len == 0) continue;
             if (std.mem.eql(u8, trimmed, "<tokens>") or std.mem.eql(u8, trimmed, "</tokens>")) continue;
@@ -116,17 +118,17 @@ const Parser = struct {
     pub fn getCurrentToken(self: *Self) ?Token {
         if (self.current_token >= self.tokens.items.len) return null;
         return self.tokens.items[self.current_token];
-    }
+    } // מחזיר את הטוקן הנוכחי עליו עובד ה parser
 
     pub fn peekToken(self: *Self, offset: usize) ?Token {
         const index = self.current_token + offset;
         if (index >= self.tokens.items.len) return null;
         return self.tokens.items[index];
-    }
+    } // נחליט על offset שיגיד לנו כמה lookahead אנחנו יכולים לראות בטוקנים
 
     pub fn advance(self: *Self) void {
         self.current_token += 1;
-    }
+    } // התקדמות לטוקן הבא
 
     pub fn isKeyword(self: *Self, keyword: []const u8) bool {
         if (self.getCurrentToken()) |token| {
@@ -200,7 +202,7 @@ const Parser = struct {
         }
     }
 
-    // ===== פונקציות הפירוח המלאות =====
+    // ===== פונקציות הפרשינג המלאות =====
 
     pub fn parseClass(self: *Self) ParseError!void {
         try self.writeOpenTag("class");
@@ -557,7 +559,7 @@ const Parser = struct {
 
         try self.writeCloseTag("expression");
     }
-
+    //מטפלת בביטויים מתמתטים ולוגים
     pub fn parseTerm(self: *Self) ParseError!void {
         try self.writeOpenTag("term");
 
@@ -620,7 +622,7 @@ const Parser = struct {
 
         try self.writeCloseTag("term");
     }
-
+    // מטפלת בקריאות של פונקציות
     pub fn parseSubroutineCall(self: *Self) ParseError!void {
         // subroutineName(expressionList) |
         // (className | varName).subroutineName(expressionList)
@@ -646,7 +648,7 @@ const Parser = struct {
         try self.writeCurrentToken();
         self.advance();
     }
-
+    //טיפול בפרמטרים שמתקבלים לפונקציב
     pub fn parseExpressionList(self: *Self) ParseError!void {
         try self.writeOpenTag("expressionList");
 
@@ -701,6 +703,7 @@ const Parser = struct {
 };
 
 pub fn main() !void {
+    // ניהול זיכרון
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -731,7 +734,7 @@ pub fn main() !void {
     var parser = Parser.init(allocator);
     defer parser.deinit();
 
-    // טעינת הטוקנים מקובץ ה-XML המטוקן ופירוח
+    // טעינת הטוקנים מקובץ ה-XML
     try parser.loadTokensFromXML(input_file);
     print("Loaded {d} tokens from {s}\n", .{ parser.tokens.items.len, input_file });
 
