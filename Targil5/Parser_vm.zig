@@ -39,6 +39,7 @@ const Parser = struct {
     current_function_name: []const u8,
     current_function_type: SubroutineType,
     label_counter: u32, // for generating unique labels
+    current_file_name: []const u8,
 
     const Self = @This();
 
@@ -54,6 +55,7 @@ const Parser = struct {
             .current_function_name = "",
             .current_function_type = .function,
             .label_counter = 0,
+            .current_file_name = "",
         };
     }
 
@@ -163,6 +165,22 @@ const Parser = struct {
         return false;
     }
 
+    pub fn isOp(self: *Self) bool {
+        if (self.getCurrentToken()) |token| {
+            if (token.type == .symbol) {
+                return std.mem.eql(u8, token.value, "+") or
+                    std.mem.eql(u8, token.value, "-") or
+                    std.mem.eql(u8, token.value, "*") or
+                    std.mem.eql(u8, token.value, "/") or
+                    std.mem.eql(u8, token.value, "&") or
+                    std.mem.eql(u8, token.value, "|") or
+                    std.mem.eql(u8, token.value, "<") or
+                    std.mem.eql(u8, token.value, ">") or
+                    std.mem.eql(u8, token.value, "=");
+            }
+        }
+        return false;
+    }
     fn writeVMCommand(self: *Self, command: []const u8) !void {
         try self.vm_writer.writeAll(command);
         try self.vm_writer.writeAll("\n");
@@ -203,9 +221,12 @@ const Parser = struct {
     fn writeReturn(self: *Self) !void {
         try self.vm_writer.writeAll("return\n");
     }
-
+    fn writeConditionJump(self: *Self, jump_label: []const u8) !void {
+        try self.writeIf(jump_label);
+    }
     fn getUniqueLabel(self: *Self, prefix: []const u8) ![]const u8 {
-        const label = try std.fmt.allocPrint(self.allocator, "{s}{d}", .{ prefix, self.label_counter });
+        const label = try std.fmt.allocPrint(self.allocator, "{s}.{s}_{s}_{d}", .{ self.current_class_name, self.current_function_name, prefix, self.label_counter });
+        std.debug.print("Generated label: {s}\n", .{label}); // DEBUG
         self.label_counter += 1;
         return label;
     }
@@ -299,9 +320,6 @@ const Parser = struct {
         self.current_function_type = subroutine_type;
         self.advance();
 
-        // startSubroutine תטפל ב-this אם זה method
-        try self.symbol_table.startSubroutine(subroutine_type);
-
         // void | type
         if (self.getCurrentToken()) |token| {
             return_type = token.value;
@@ -314,6 +332,9 @@ const Parser = struct {
             self.current_function_name = function_name;
         }
         self.advance();
+
+        // Start new subroutine scope BEFORE parsing parameters
+        try self.symbol_table.startSubroutine(subroutine_type);
 
         // (
         self.advance();
@@ -422,7 +443,7 @@ const Parser = struct {
         self.advance();
     }
 
-    pub fn compileStatements(self: *Self) !void {
+    pub fn compileStatements(self: *Self) anyerror!void {
         while (true) {
             if (self.isKeyword("let")) {
                 try self.compileLetStatement();
@@ -484,7 +505,7 @@ const Parser = struct {
         } else {
             // משתנה רגיל
             if (self.symbol_table.kindOf(var_name)) |kind| {
-                const index = self.symbol_table.indexOf(var_name);
+                const index = self.symbol_table.indexOf(var_name) orelse return error.UnknownType;
                 const segment = kindToSegment(kind);
                 try self.writePop(segment, @intCast(index));
             }
@@ -495,44 +516,35 @@ const Parser = struct {
     }
 
     pub fn compileIfStatement(self: *Self) !void {
-        const if_true = try self.getUniqueLabel("IF_TRUE");
         const if_false = try self.getUniqueLabel("IF_FALSE");
+        defer self.allocator.free(if_false);
         const if_end = try self.getUniqueLabel("IF_END");
+        defer self.allocator.free(if_end);
 
-        // if
-        self.advance();
+        self.advance(); // 'if'
+        self.advance(); // '('
 
-        // (
-        self.advance();
-
-        // expression
         try self.compileExpression();
 
-        // )
-        self.advance();
+        // Always negate the condition to jump to false branch
+        try self.writeArithmetic("not");
+        try self.writeIf(if_false);
 
-        try self.writeIf(if_true);
-        try self.writeGoto(if_false);
-        try self.writeLabel(if_true);
+        self.advance(); // ')'
+        self.advance(); // '{'
 
-        // {
-        self.advance();
-
-        // statements
         try self.compileStatements();
+        self.advance(); // '}'
 
-        // }
-        self.advance();
-
-        // (else { statements })?
         if (self.isKeyword("else")) {
             try self.writeGoto(if_end);
             try self.writeLabel(if_false);
 
-            self.advance(); // else
-            self.advance(); // {
+            self.advance(); // 'else'
+            self.advance(); // '{'
+
             try self.compileStatements();
-            self.advance(); // }
+            self.advance(); // '}'
 
             try self.writeLabel(if_end);
         } else {
@@ -541,36 +553,29 @@ const Parser = struct {
     }
 
     pub fn compileWhileStatement(self: *Self) !void {
-        const while_exp = try self.getUniqueLabel("WHILE_EXP");
+        const while_start = try self.getUniqueLabel("WHILE_START");
+        defer self.allocator.free(while_start);
         const while_end = try self.getUniqueLabel("WHILE_END");
+        defer self.allocator.free(while_end);
 
-        try self.writeLabel(while_exp);
+        try self.writeLabel(while_start);
 
-        // while
-        self.advance();
+        self.advance(); // 'while'
+        self.advance(); // '('
 
-        // (
-        self.advance();
-
-        // expression
         try self.compileExpression();
 
-        // )
-        self.advance();
-
+        // Always negate the condition to jump to end when false
         try self.writeArithmetic("not");
         try self.writeIf(while_end);
 
-        // {
-        self.advance();
+        self.advance(); // ')'
+        self.advance(); // '{'
 
-        // statements
         try self.compileStatements();
+        self.advance(); // '}'
 
-        // }
-        self.advance();
-
-        try self.writeGoto(while_exp);
+        try self.writeGoto(while_start);
         try self.writeLabel(while_end);
     }
 
@@ -606,7 +611,7 @@ const Parser = struct {
         self.advance();
     }
 
-    pub fn compileExpression(self: *Self) !void {
+    pub fn compileExpression(self: *Self) anyerror!void {
         // term
         try self.compileTerm();
 
@@ -643,7 +648,7 @@ const Parser = struct {
         }
     }
 
-    pub fn compileTerm(self: *Self) !void {
+    pub fn compileTerm(self: *Self) anyerror!void {
         if (self.getCurrentToken()) |token| {
             if (token.type == .integerConstant) {
                 const value = std.fmt.parseInt(u16, token.value, 10) catch 0;
@@ -714,7 +719,7 @@ const Parser = struct {
 
     fn compileVarName(self: *Self, var_name: []const u8) !void {
         if (self.symbol_table.kindOf(var_name)) |kind| {
-            const index = self.symbol_table.indexOf(var_name);
+            const index = self.symbol_table.indexOf(var_name) orelse return error.UnknownType;
             const segment = kindToSegment(kind);
             try self.writePush(segment, @intCast(index));
         }
@@ -740,7 +745,7 @@ const Parser = struct {
         self.advance(); // ]
     }
 
-    pub fn compileSubroutineCall(self: *Self) !void {
+    pub fn compileSubroutineCall(self: *Self) anyerror!void {
         var nArgs: u16 = 0;
         var function_name: []const u8 = undefined;
         var allocated_name = false; // Track if we need to free memory
@@ -846,6 +851,15 @@ const Parser = struct {
         return false;
     }
 };
+
+fn getFileNameFromPath(path: []const u8) []const u8 {
+    const basename = std.fs.path.basename(path);
+    if (std.mem.lastIndexOf(u8, basename, ".")) |dot_index| {
+        return basename[0..dot_index];
+    }
+    return basename;
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -873,8 +887,9 @@ pub fn main() !void {
 
     // תיקון: העבר את vm_writer ל-init
     var parser = Parser.init(allocator, output_file_handle.writer());
-    defer parser.deinit();
+    parser.current_file_name = getFileNameFromPath(input_file);
     defer parser.symbol_table.deinit();
+    defer parser.deinit();
 
     try parser.loadTokensFromXML(input_file);
     print("Loaded {d} tokens from {s}\n", .{ parser.tokens.items.len, input_file });
