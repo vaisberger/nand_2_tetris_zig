@@ -81,8 +81,12 @@ pub const SymbolTable = struct {
         var method_iter = self.method_scope.iterator();
         while (method_iter.next()) |entry| {
             const symbol = entry.value_ptr.*;
-            self.allocator.free(symbol.name);
-            self.allocator.free(symbol.type);
+            // Don't free "this" - it's a string literal
+            if (!std.mem.eql(u8, symbol.name, "this")) {
+                self.allocator.free(symbol.name);
+                self.allocator.free(symbol.type);
+            }
+            // For "this" symbol, don't free name or type since they're not owned
         }
 
         // Free current class name if it exists
@@ -121,26 +125,43 @@ pub const SymbolTable = struct {
     }
 
     // Start a new subroutine - reset method scope table
-    pub fn startSubroutine(self: *SymbolTable, subroutine_type: SubroutineType) !void {
-        // Free existing method scope symbols
-        self.freeSymbolsInScope(&self.method_scope);
+    pub fn startSubroutine(self: *SymbolTable, subroutine_type: SubroutineType, class_name: ?[]const u8) !void {
+        std.debug.print("START_SUBROUTINE: Beginning, type={}\n", .{subroutine_type});
+
+        // CRITICAL FIX: Clear the method scope before starting new subroutine
+        // Free existing method scope symbols first
+        var method_iter = self.method_scope.iterator();
+        while (method_iter.next()) |entry| {
+            const symbol = entry.value_ptr.*;
+            // Only free if it's not "this" (since "this" uses string literals)
+            if (!std.mem.eql(u8, symbol.name, "this")) {
+                self.allocator.free(symbol.name);
+                self.allocator.free(symbol.type);
+            }
+        }
         self.method_scope.clearAndFree();
 
         self.argument_count = 0;
         self.local_count = 0;
+        std.debug.print("START_SUBROUTINE: Reset counters, argument_count={}\n", .{self.argument_count});
 
         // For methods only: add 'this' as first argument (index 0)
         if (subroutine_type == .method) {
-            if (self.current_class_name) |class_name| {
-                // Create owned copies for 'this' symbol
-                const this_name = try self.allocator.dupe(u8, "this");
-                const this_type = try self.allocator.dupe(u8, class_name);
+            std.debug.print("START_SUBROUTINE: Processing method, defining 'this'\n", .{});
+            if (class_name) |name| {
+                const this_name = "this";
+                const this_type = name;
 
                 const this_symbol = Symbol.init(this_name, this_type, .argument, 0);
                 try self.method_scope.put(this_name, this_symbol);
                 self.argument_count = 1; // Start from 1 for other arguments
+                std.debug.print("START_SUBROUTINE: 'this' defined, argument_count set to {}\n", .{self.argument_count});
+            } else {
+                std.debug.print("START_SUBROUTINE: ERROR - current_class_name is null!\n", .{});
             }
         }
+
+        std.debug.print("START_SUBROUTINE: Completed, final argument_count={}\n", .{self.argument_count});
     }
 
     // Define a new symbol
@@ -190,7 +211,6 @@ pub const SymbolTable = struct {
         errdefer self.allocator.free(owned_type); // Clean up on error
 
         const symbol = Symbol.init(owned_name, owned_type, kind, index);
-
         // Add to appropriate scope table
         switch (kind) {
             .static, .field => {

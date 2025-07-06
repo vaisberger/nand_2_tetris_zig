@@ -226,7 +226,6 @@ const Parser = struct {
     }
     fn getUniqueLabel(self: *Self, prefix: []const u8) ![]const u8 {
         const label = try std.fmt.allocPrint(self.allocator, "{s}.{s}_{s}_{d}", .{ self.current_class_name, self.current_function_name, prefix, self.label_counter });
-        std.debug.print("Generated label: {s}\n", .{label}); // DEBUG
         self.label_counter += 1;
         return label;
     }
@@ -252,6 +251,7 @@ const Parser = struct {
 
         // subroutineDec*
         while (self.isKeyword("constructor") or self.isKeyword("function") or self.isKeyword("method")) {
+            std.debug.print("className: '{s}'", .{self.current_class_name});
             try self.compileSubroutineDec();
         }
 
@@ -334,13 +334,16 @@ const Parser = struct {
         self.advance();
 
         // Start new subroutine scope BEFORE parsing parameters
-        try self.symbol_table.startSubroutine(subroutine_type);
+        std.debug.print("SUBROUTINE='{s}'\n", .{self.current_class_name});
+        try self.symbol_table.startSubroutine(subroutine_type, self.current_class_name);
+        std.debug.print("SUBROUTINE: startSubroutine completed\n", .{});
 
         // (
         self.advance();
 
         // parameterList
         try self.compileParameterList();
+        std.debug.print("SUBROUTINE: compileParameterList completed\n", .{});
 
         // )
         self.advance();
@@ -518,7 +521,7 @@ const Parser = struct {
     pub fn compileIfStatement(self: *Self) !void {
         const if_false = try self.getUniqueLabel("IF_FALSE");
         defer self.allocator.free(if_false);
-        const if_end = try self.getUniqueLabel("IF_END");
+        const if_end = try self.getUniqueLabel("IF_TRUE");
         defer self.allocator.free(if_end);
 
         self.advance(); // 'if'
@@ -718,10 +721,12 @@ const Parser = struct {
     }
 
     fn compileVarName(self: *Self, var_name: []const u8) !void {
-        if (self.symbol_table.kindOf(var_name)) |kind| {
-            const index = self.symbol_table.indexOf(var_name) orelse return error.UnknownType;
-            const segment = kindToSegment(kind);
-            try self.writePush(segment, @intCast(index));
+        if (self.symbol_table.lookup(var_name)) |symbol| {
+            const segment = kindToSegment(symbol.kind);
+            try self.writePush(segment, symbol.index);
+        } else {
+            std.debug.print("ERROR: Variable '{s}' not found!\n", .{var_name});
+            return error.UndefinedVariable;
         }
         self.advance();
     }
@@ -762,29 +767,32 @@ const Parser = struct {
                     const second_name = second_token.value;
                     self.advance();
 
-                    // Check if it's a variable or class name
+                    // Check if it's a variable (object instance) or class name
                     if (self.symbol_table.kindOf(first_name)) |kind| {
-                        // It's an object - method call
+                        // It's an object variable - method call on that object
                         const var_type = self.symbol_table.typeOf(first_name) orelse return error.UnknownType;
                         const index = self.symbol_table.indexOf(first_name) orelse return error.UnknownType;
                         const segment = kindToSegment(kind);
 
-                        try self.writePush(segment, @intCast(index)); // push this
+                        // Push the object reference as 'this' for the method call
+                        try self.writePush(segment, @intCast(index));
                         nArgs += 1;
 
                         function_name = try std.fmt.allocPrint(self.allocator, "{s}.{s}", .{ var_type, second_name });
                         allocated_name = true;
                     } else {
-                        // It's a class name - static function call
+                        // It's a class name - static function call (no 'this' needed)
                         function_name = try std.fmt.allocPrint(self.allocator, "{s}.{s}", .{ first_name, second_name });
                         allocated_name = true;
+                        // Note: nArgs remains 0 since no 'this' is pushed for static calls
                     }
                 } else {
                     return error.ExpectedIdentifier;
                 }
             } else {
-                // Method of current class
-                try self.writePush("pointer", 0); // push this
+                // Method call without dot - it's a method of current class
+                // Push current object's 'this' pointer
+                try self.writePush("pointer", 0);
                 nArgs += 1;
                 function_name = try std.fmt.allocPrint(self.allocator, "{s}.{s}", .{ self.current_class_name, first_name });
                 allocated_name = true;
